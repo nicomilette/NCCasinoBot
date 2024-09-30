@@ -22,7 +22,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 last_total_downloads = 0
 
 # Task to check the download counts every 5 minutes.
-@tasks.loop(minutes=5)
+@tasks.loop(minutes=60)
 async def check_downloads():
     global last_total_downloads
     
