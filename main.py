@@ -1,6 +1,6 @@
 # main.py
 import discord
-from discord.ext import commands, tasks  # Ensure 'tasks' is imported from 'discord.ext'
+from discord.ext import commands, tasks
 from dotenv import load_dotenv
 import os
 import traceback
@@ -13,10 +13,11 @@ load_dotenv()
 # Get the bot token from the .env file
 TOKEN = os.getenv('DISCORD_BOT_TOKEN')
 
-# Set up intents
+# Set up intents for voice states and messages
 intents = discord.Intents.default()
 intents.messages = True
 intents.presences = True
+intents.voice_states = True  # Enable voice event handling
 
 # Create bot instance
 bot = commands.Bot(command_prefix='!', intents=intents)
@@ -25,18 +26,15 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 last_total_downloads = 0
 
 # Task to check the download counts every 60 minutes
-@tasks.loop(minutes=60)  # Fixed tasks import
+@tasks.loop(minutes=60)
 async def check_downloads():
     global last_total_downloads
-
     try:
         total_downloads = await get_total_downloads()
-
-        if total_downloads is not None:
-            if total_downloads != last_total_downloads:
-                last_total_downloads = total_downloads
-                await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"Total Downloads: {total_downloads}"))
-                print(f"Updated bot activity with total downloads: {total_downloads}")
+        if total_downloads != last_total_downloads:
+            last_total_downloads = total_downloads
+            await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=f"Total Downloads: {total_downloads}"))
+            print(f"Updated bot activity with total downloads: {total_downloads}")
     except Exception as e:
         print(f"Error in check_downloads: {e}")
         traceback.print_exc()
