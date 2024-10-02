@@ -7,7 +7,7 @@ import time  # Import the time module to implement delays between retries
 # Load environment variables from .env file
 load_dotenv()
 
-def fetch_spigot_download_count(url, retries=3, delay=2):
+def fetch_spigot_download_count(url, retries=10, delay=2):
 
     # Get the ZenRows API key from the environment
     api_key = os.getenv("ZENROWS_API_KEY")
