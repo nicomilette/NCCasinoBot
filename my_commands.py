@@ -109,7 +109,7 @@ def register_commands(bot):
                 await play_audio(vc, str(speech_file_path))
 
                 # Send confirmation after the audio is played
-                await interaction.followup.send(f"Said: {input}")
+                await interaction.followup.send(f"{input}")
 
             else:
                 await interaction.followup.send("You are not in a voice channel!")
