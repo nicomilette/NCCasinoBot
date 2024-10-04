@@ -5,3 +5,4 @@ beautifulsoup4
 zenrows
 asyncio
 openai
+resemble
