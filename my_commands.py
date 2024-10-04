@@ -1,13 +1,23 @@
 import discord
 from discord import app_commands
 from openai import OpenAI
+from resemble import Resemble
 from dotenv import load_dotenv
 import os
+import requests
 from pathlib import Path
 import asyncio
 
 # Load environment variables from .env file
 load_dotenv()
+# Set Resemble API key from environment variable
+Resemble.api_key(os.getenv('RESEMBLE_API_KEY'))
+
+# Dynamically get the default project UUID
+project_uuid = Resemble.v2.projects.all(1, 10)['items'][0]['uuid']
+
+# Use the Voice UUID from environment variable
+voice_uuid = os.getenv('VOICE_UUID')
 
 # Get the OpenAI API key
 api_key = os.getenv("OPENAI_API_KEY")
@@ -25,20 +35,62 @@ def split_for_openai(text, max_length=4096):
 
 # Helper function to play audio in a voice channel
 async def play_audio(vc, audio_source):
-    vc.play(discord.FFmpegPCMAudio(audio_source), after=lambda e: print('done', e))
-    while vc.is_playing():
-        await asyncio.sleep(1)
-    await vc.disconnect()
+    if os.path.exists(audio_source):
+        vc.play(discord.FFmpegPCMAudio(audio_source), after=lambda e: print('done', e))
+        while vc.is_playing():
+            await asyncio.sleep(1)
+        await vc.disconnect()
+    else:
+        print(f"Audio file {audio_source} not found.")
 
-# Helper function to convert text to speech using OpenAI
+
+
 async def convert_text_to_speech(text, output_file):
-    client = OpenAI(api_key=api_key)
-    response = client.audio.speech.create(
-        model="tts-1",
-        voice="echo",  # You can choose different voices like 'alloy', 'echo', 'fable', etc.
-        input=text
-    )
-    response.stream_to_file(output_file)
+    try:
+        # Load environment variables
+        Resemble.api_key(os.getenv('RESEMBLE_API_KEY'))
+        
+        # Dynamically get the default project UUID
+        project_uuid = Resemble.v2.projects.all(1, 10)['items'][0]['uuid']
+        
+        # Use the Voice UUID from environment variable
+        voice_uuid = os.getenv('VOICE_UUID')
+
+        # Generate the audio clip synchronously using Resemble
+        response = Resemble.v2.clips.create_sync(
+            project_uuid,
+            voice_uuid,
+            text,
+            title=None,
+            sample_rate=None,
+            output_format=None,
+            precision=None,
+            include_timestamps=None,
+            is_archived=None,
+            raw=None
+        )
+
+        # Extract the clip information from the response
+        clip = response['item']
+        audio_url = clip.get('audio_src')  # Extract the audio URL
+
+        # Download the audio file and save it
+        await download_audio(audio_url, output_file)
+    
+    except Exception as e:
+        print(f"An error occurred while converting text to speech: {e}")
+
+# Helper function to download audio using Resemble's API
+async def download_audio(audio_url, output_file='output.wav'):
+    try:
+        response = requests.get(audio_url, stream=True)
+        response.raise_for_status()  # Raise an exception for bad responses
+        with open(output_file, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        print(f"Audio downloaded and saved as {output_file}")
+    except Exception as e:
+        print(f"An error occurred while downloading the audio: {e}")
 
 # Add this global variable to keep track of the current voice client
 active_voice_clients = {}
